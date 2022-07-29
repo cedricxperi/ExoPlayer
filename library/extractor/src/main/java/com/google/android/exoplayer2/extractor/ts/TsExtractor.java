@@ -554,6 +554,7 @@ public final class TsExtractor implements Extractor {
     private static final int TS_PMT_DESC_DVBSUBS = 0x59;
 
     private static final int TS_PMT_DESC_DVB_EXT_AC4 = 0x15;
+    private static final int TS_PMT_DESC_DVB_EXT_DTS_HD = 0x0E;
 
     private final ParsableBitArray pmtScratch;
     private final SparseArray<@NullableType TsPayloadReader> trackIdToReaderScratch;
@@ -744,7 +745,11 @@ public final class TsExtractor implements Extractor {
             // AC-4_descriptor in DVB (ETSI EN 300 468).
             streamType = TS_STREAM_TYPE_AC4;
           }
-        } else if (descriptorTag == TS_PMT_DESC_DTS) { // DTS_descriptor
+        } else if(descriptorTag == TS_PMT_DESC_DVB_EXT_DTS_HD) {
+          //DTS-HD_audio_stream_descriptor  in 'ETSI EN 300 468 V1.15.1 (2016-03)'
+          streamType = TS_STREAM_TYPE_DTS;
+        }
+        else if (descriptorTag == TS_PMT_DESC_DTS) { // DTS_descriptor
           streamType = TS_STREAM_TYPE_DTS;
         } else if (descriptorTag == TS_PMT_DESC_ISO639_LANG) {
           language = data.readString(3).trim();

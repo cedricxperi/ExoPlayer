@@ -15,15 +15,43 @@
  */
 package com.google.android.exoplayer2.audio;
 
-import androidx.annotation.Nullable;
+import android.util.Log;
+
+import com.google.android.exoplayer2.C;
 import com.google.android.exoplayer2.Format;
-import com.google.android.exoplayer2.drm.DrmInitData;
 import com.google.android.exoplayer2.util.MimeTypes;
 import com.google.android.exoplayer2.util.ParsableBitArray;
+
+import com.google.android.exoplayer2.util.ParsableByteArray;
+import com.google.android.exoplayer2.util.Util;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 
-/** Utility methods for parsing DTS frames. */
+final class dtsParsableBitArray {
+
+  public ParsableBitArray dtsStream;
+
+  dtsParsableBitArray(byte[] myBytes) {
+    dtsStream = new ParsableBitArray(myBytes);
+  }
+
+  dtsParsableBitArray(ParsableBitArray frameBits) {
+    dtsStream = frameBits;
+  }
+
+  /* Add a method to clone a ParsableBitArray */
+  public dtsParsableBitArray dtsBitstreamClone() {
+    dtsParsableBitArray myArray;
+    myArray = new dtsParsableBitArray(this.dtsStream.data);
+
+    myArray.dtsStream.setPosition(this.dtsStream.getPosition());
+    return myArray;
+  }
+}
+
+/**
+ * Utility methods for parsing DTS frames.
+ */
 public final class DtsUtil {
 
   /**
@@ -32,173 +60,363 @@ public final class DtsUtil {
    * <p>DTS allows an 'open' bitrate, but we assume the maximum listed value: 1536 kbit/s.
    */
   public static final int DTS_MAX_RATE_BYTES_PER_SECOND = 1536 * 1000 / 8;
-  /** Maximum rate for a DTS-HD audio stream, in bytes per second. */
+  /**
+   * Maximum rate for a DTS-HD audio stream, in bytes per second.
+   */
   public static final int DTS_HD_MAX_RATE_BYTES_PER_SECOND = 18000 * 1000 / 8;
 
-  private static final int SYNC_VALUE_BE = 0x7FFE8001;
-  private static final int SYNC_VALUE_14B_BE = 0x1FFFE800;
-  private static final int SYNC_VALUE_LE = 0xFE7F0180;
-  private static final int SYNC_VALUE_14B_LE = 0xFF1F00E8;
-  private static final byte FIRST_BYTE_BE = (byte) (SYNC_VALUE_BE >>> 24);
-  private static final byte FIRST_BYTE_14B_BE = (byte) (SYNC_VALUE_14B_BE >>> 24);
-  private static final byte FIRST_BYTE_LE = (byte) (SYNC_VALUE_LE >>> 24);
-  private static final byte FIRST_BYTE_14B_LE = (byte) (SYNC_VALUE_14B_LE >>> 24);
+  private static final String TAG = "DtsUtil";
+  public static final int DTSAUDIO_MAX_FRAME_SIZE = 32768;
+  public static final int DTSHD_SYNC_CORE_16BIT_BE = 0x7FFE8001;
+  public static final int DTSHD_SYNC_CORE_14BIT_BE = 0x1FFFE800;
+  public static final int DTSHD_SYNC_CORE_16BIT_LE = 0xFE7F0180;
+  public static final int DTSHD_SYNC_CORE_14BIT_LE = 0xFF1F00E8;
+  public static final int DTSHD_SYNC_EXSS_16BIT_BE = 0x64582025;
+  public static final int DTSHD_SYNC_EXSS_16BIT_LE = 0x58642520;
 
-  /** Maps AMODE to the number of channels. See ETSI TS 102 114 table 5.4. */
-  private static final int[] CHANNELS_BY_AMODE =
-      new int[] {1, 2, 2, 2, 2, 3, 3, 4, 4, 5, 6, 6, 6, 7, 8, 8};
+  private static final byte FIRST_BYTE_16B_BE = (byte) (DTSHD_SYNC_CORE_16BIT_BE >>> 24);
+  private static final byte FIRST_BYTE_14B_BE = (byte) (DTSHD_SYNC_CORE_14BIT_BE >>> 24);
+  private static final byte FIRST_BYTE_16B_LE = (byte) (DTSHD_SYNC_CORE_16BIT_LE >>> 24);
+  private static final byte FIRST_BYTE_14B_LE = (byte) (DTSHD_SYNC_CORE_14BIT_LE >>> 24);
+  private static final byte FIRST_BYTE_EXSS_16BIT_LE = (byte) (DTSHD_SYNC_EXSS_16BIT_LE >>> 24);
 
-  /** Maps SFREQ to the sampling frequency in Hz. See ETSI TS 102 144 table 5.5. */
-  private static final int[] SAMPLE_RATE_BY_SFREQ =
-      new int[] {
-        -1, 8000, 16000, 32000, -1, -1, 11025, 22050, 44100, -1, -1, 12000, 24000, 48000, -1, -1
-      };
+  private static final int[] dtsChannelCountTable = new int[]{1, 2, 2, 2, 2, 3, 3, 4, 4, 5};
+  private static final int[] nRefClockTable = {32000, 44100, 48000, 0x7FFFFFFF};
+  private static final int[] dtsSamplingRateTable = new int[]{0, 8000, 16000, 32000, 0,
+      0, 11025, 22050, 44100, 0,
+      0, 12000, 24000, 48000, 0, 0};
+  private static final int[] dtsSampleRateTableExtension = new int[]{8000, 16000, 32000, 64000,
+      128000,
+      22050, 44100, 88200, 176400, 352800,
+      12000, 24000, 48000, 96000, 192000, 384000};
 
-  /** Maps RATE to 2 * bitrate in kbit/s. See ETSI TS 102 144 table 5.7. */
-  private static final int[] TWICE_BITRATE_KBPS_BY_RATE =
-      new int[] {
-        64, 112, 128, 192, 224, 256, 384, 448, 512, 640, 768, 896, 1024, 1152, 1280, 1536, 1920,
-        2048, 2304, 2560, 2688, 2816, 2823, 2944, 3072, 3840, 4096, 6144, 7680
-      };
+  private static int dtsChannelCount = 2; //Default value
+  private static int dtsSamplingRate = 48000; //Default value
+  private static int dtsBitDepth = 2; //16bits
+  private static int dtsNumOfSamples = 0;
+  private static int dtsFrameSizeInBytes = 0;
+  private static long dtsFrameDuration = 0;
 
-  /**
-   * Returns whether a given integer matches a DTS sync word. Synchronization and storage modes are
-   * defined in ETSI TS 102 114 V1.1.1 (2002-08), Section 5.3.
-   *
-   * @param word An integer.
-   * @return Whether a given integer matches a DTS sync word.
-   */
-  public static boolean isSyncWord(int word) {
-    return word == SYNC_VALUE_BE
-        || word == SYNC_VALUE_LE
-        || word == SYNC_VALUE_14B_BE
-        || word == SYNC_VALUE_14B_LE;
+  private static int sampleSize = 0;
+
+
+  public static boolean parseFrame(ByteBuffer dataBuffer, int frameSize) {
+    int samplingrate = 0;
+    int numChannels = 0;
+
+    byte[] dtsFrame = new byte[dataBuffer.limit()];
+    dataBuffer.get(dtsFrame, 0, dataBuffer.limit());
+
+    ParsableBitArray frameBits = getNormalizedFrameHeader(
+        dtsFrame); //convert header to 16bit Big-endian if format is 14bit or Little-endian
+    dtsParsableBitArray bitData = new dtsParsableBitArray(frameBits);
+    int nBitstreamOffset = 0;
+    int nShiftReg = 0;
+    int nExSSsyncWord = 0;
+    byte temp;
+    int nCoreHits = 0;
+
+    dtsFrameSizeInBytes = frameSize;
+
+    while (nBitstreamOffset < frameSize) {
+
+      nShiftReg = (nShiftReg << 8);
+      nShiftReg |= (bitData.dtsStream.readBits(8) & 0x000000FF);
+      nBitstreamOffset++;
+
+      if (((nShiftReg == DTSHD_SYNC_CORE_16BIT_BE) ||
+          (nShiftReg == DTSHD_SYNC_CORE_16BIT_LE) ||
+          (nShiftReg == DTSHD_SYNC_CORE_14BIT_BE) ||
+          (nShiftReg == DTSHD_SYNC_CORE_14BIT_LE)) &&
+          ((nBitstreamOffset & 3) == 0)) {
+
+        int NBLKS, FSIZE, AMODE, SFREQ, EXT_AUDIO_ID, EXT_AUDIO, LFF;
+
+        nCoreHits++;
+        if (nCoreHits > 1) {
+          /* Core sync word has hit again; break from loop */
+          break;
+        }
+        if (bitData.dtsStream.bitsLeft()
+            < 55) { /* number of bits needed for parsing CoreSS header excluding sync bits*/
+          Log.e(TAG, "parseFrame: Not enough bits left for further parsing");
+          return false;
+        }
+
+        bitData.dtsStream.skipBits(7); //FTYPE(1) + SHORT(5) + CRC(1)
+
+        NBLKS = bitData.dtsStream.readBits(7);
+        Log.d(TAG, "parseFrame: Number of Samples(CoreSS) " + (NBLKS + 1) * 32);
+
+        FSIZE = bitData.dtsStream.readBits(14)
+            + 1; //Frame size doesn't really matter as we always read data between sync words
+        Log.d(TAG, "parseFrame: Frame size(CoreSS) " + FSIZE);
+
+        AMODE = bitData.dtsStream.readBits(6);
+        SFREQ = bitData.dtsStream.readBits(4);
+        bitData.dtsStream.skipBits(5 + 1 + 1 + 1 + 1 + 1 + 3 + 1
+            + 1); /* RATE, FIXEDBIT, DYNF, TIMEF, AUXF, HDCD, EXT_AUDIO_ID, EXT_AUDIO, ASPF */
+        LFF = bitData.dtsStream.readBits(2);
+
+        numChannels = (AMODE <= 9) ? dtsChannelCountTable[AMODE] : 0;
+        numChannels += (LFF != 0) ? 1 : 0;
+        samplingrate = dtsSamplingRateTable[SFREQ];
+        dtsNumOfSamples = ((NBLKS + 1) * 32);
+        dtsFrameDuration = (long) ((float) (dtsNumOfSamples * C.MICROS_PER_SECOND) / samplingrate);
+
+        nBitstreamOffset += (FSIZE - 4);
+        if (nBitstreamOffset < frameSize) {
+          bitData.dtsStream.setPosition(FSIZE * 8); /* Set bit-stream position after Core frame*/
+        }
+
+      } else if (((nShiftReg == DTSHD_SYNC_EXSS_16BIT_BE) ||
+          (nShiftReg == DTSHD_SYNC_EXSS_16BIT_LE)) &&
+          ((nBitstreamOffset & 3) == 0)) {
+
+        int nExtSSIndex, nuActiveAssetMask, nuNumAudioPresnt, nuNumAssets, numExtHeadersize, numExtSSFsize;
+        int nuExSSFrameDurationCode = 0, nuRefClockCode = 0;
+
+        if (nExSSsyncWord == nShiftReg) {
+          /* If same ExSS sync word has occured again, break from the loop. */
+          /* Not handled streams with multiple ExSS */
+          break;
+        }
+        nExSSsyncWord = nShiftReg;
+
+        if (bitData.dtsStream.bitsLeft() < 11) { /* to parse up to 'bHeaderSizeType' */
+          Log.e(TAG, "parseFrame: Not enough bits left for further parsing");
+          return false;
+        }
+
+        bitData.dtsStream.skipBits(8); //UserDefinedBits(8)
+        nExtSSIndex = bitData.dtsStream.readBits(2);
+
+        int bHeaderSizeType = bitData.dtsStream.readBits(1);
+        int numBits4Header = 0;
+        int numBits4ExSSFsize = 0;
+
+        if (bHeaderSizeType == 0) {
+          numBits4Header = 8;
+          numBits4ExSSFsize = 16;
+        } else {
+          numBits4Header = 12;
+          numBits4ExSSFsize = 20;
+        }
+
+        if (bitData.dtsStream.bitsLeft() < numBits4Header + numBits4ExSSFsize) {
+          Log.e(TAG, "parseFrame: Not enough bits left for further parsing");
+          return false;
+        }
+
+        numExtHeadersize = bitData.dtsStream.readBits(numBits4Header) + 1;
+        numExtSSFsize = bitData.dtsStream.readBits(numBits4ExSSFsize) + 1;
+
+        if (bitData.dtsStream.bitsLeft() < (numExtHeadersize * 8) - (numBits4Header
+            + numBits4ExSSFsize + 11 + 32 /*sync bits*/)) {
+          Log.e(TAG, "parseFrame: Not enough bits left for further parsing");
+          return false;
+        }
+
+        Log.d(TAG, "parseFrame: Frame size(ExSS) " + numExtSSFsize);
+
+        int bStaticFieldsPresent = bitData.dtsStream.readBits(1);
+
+        if (bStaticFieldsPresent > 0) {
+          nuRefClockCode = bitData.dtsStream.readBits(2);
+          nuExSSFrameDurationCode = 512 * (bitData.dtsStream.readBits(3) + 1);
+
+          if (bitData.dtsStream.readBits(1) > 0) /* bTimeStampFlag */ {
+            bitData.dtsStream.readBits(32 + 4);
+          }
+          nuNumAudioPresnt = bitData.dtsStream.readBits(3) + 1;
+          nuNumAssets = bitData.dtsStream.readBits(3) + 1;
+
+          int[] nuActiveExSSMask = new int[8];
+          for (int nAuPr = 0; nAuPr < nuNumAudioPresnt; nAuPr++) {
+            nuActiveExSSMask[nAuPr] = bitData.dtsStream.readBits(nExtSSIndex + 1);
+          }
+
+          for (int nAuPr = 0; nAuPr < nuNumAudioPresnt; nAuPr++) {
+            for (int nSS = 0; nSS < nExtSSIndex + 1; nSS++) {
+              if (((nuActiveExSSMask[nAuPr] >> nSS) & 0x1) == 1) {
+                nuActiveAssetMask = bitData.dtsStream.readBits(8);
+              } else {
+                nuActiveAssetMask = 0;
+              }
+            }
+          }
+
+          int bMixMetaDataEnbl = bitData.dtsStream.readBits(1);
+          if (bMixMetaDataEnbl == 1) /* bMixMetadataEnbl */ {
+            bitData.dtsStream.skipBits(2); /* nuMixMetadataAdjLevel */
+            int nuBits4MixOutMask = (bitData.dtsStream.readBits(2) + 1) << 2;
+            int nuNumMixOutConfigs = bitData.dtsStream.readBits(2) + 1;
+
+            /* Output Mixing Configuration Loop  */
+            for (int nso = 0; nso < nuNumMixOutConfigs; nso++) {
+              bitData.dtsStream.skipBits(nuBits4MixOutMask); /* nuMixOutChMask */
+            }
+          }
+        } else {
+          nuNumAudioPresnt = 1;
+          nuNumAssets = 1;
+        }
+
+        for (int nAst = 0; nAst < nuNumAssets; nAst++) {
+          bitData.dtsStream.skipBits(numBits4ExSSFsize);
+        }
+
+        int nuAssetDescriptFsize = 0;
+        /* Asset descriptor */
+        for (int nAst = 0; nAst < nuNumAssets; nAst++) {
+
+          nuAssetDescriptFsize = bitData.dtsStream.readBits(9) + 1;
+          int nuAssetIndex = bitData.dtsStream.readBits(3);
+
+          /* asset is active, parse asset descriptor further */
+          if (bStaticFieldsPresent == 1) {
+            if (bitData.dtsStream.readBits(1) == 1) /* bAssetTypeDescrPresent */ {
+              bitData.dtsStream.skipBits(4); /* nuAssetTypeDescriptor */
+            }
+            if (bitData.dtsStream.readBits(1) == 1) /* bLanguageDescrPresent */ {
+              bitData.dtsStream.skipBits(24); /* LanguageDescriptor */
+            }
+            if (bitData.dtsStream.readBits(1) == 1) /* bInfoTextPresent */ {
+              int nuInfoTextByteSize = bitData.dtsStream.readBits(10) + 1;
+              bitData.dtsStream.skipBits(nuInfoTextByteSize * 8); /* InfoTextString */
+            }
+            bitData.dtsStream.skipBits(5); /* nuBitResolution */
+            samplingrate = dtsSampleRateTableExtension[bitData.dtsStream.readBits(4)];
+            numChannels = bitData.dtsStream.readBits(8) + 1;
+          } else {
+            /* dummy values */
+            samplingrate = 48000;
+            numChannels = 8;
+          }
+        }
+
+        dtsNumOfSamples = (int) ((float) nuExSSFrameDurationCode * (samplingrate
+            / nRefClockTable[nuRefClockCode]));
+        dtsFrameDuration = (long) (((float) dtsNumOfSamples * C.MICROS_PER_SECOND)
+            / samplingrate); // In seconds
+
+        nBitstreamOffset += numExtSSFsize - 4; /* Setting bit-stream position at the end of ExSS*/
+        /* Not handled  bitData.dtsStream.setPosition(). Cases with multiple EXSS in a frame needs to be handled */
+      }
+    }
+
+    if (numChannels == 0 || (numChannels > 2 && numChannels < 6)) {
+      numChannels = 6; //[NJ] Give a default value to try
+    } else if (numChannels > 6 && numChannels != 8) {
+      numChannels = 8;
+    }
+
+    if (samplingrate == 0) {
+      samplingrate = 48000;
+    }
+
+    dtsChannelCount = numChannels;
+    dtsSamplingRate = samplingrate;
+
+    Log.d(TAG, "parseFrame: Number of Channels " + numChannels);
+    Log.d(TAG, "parseFrame: Sampling Frequency " + samplingrate);
+    Log.d(TAG, "parseFrame: Frame duration in micro seconds " + dtsFrameDuration);
+
+    return true;
+  }
+
+  public static Format getFormat(int trackId, long durationUs) {
+
+    Format dtsFormat;
+
+    dtsFormat = Format.createAudioSampleFormat(((Integer) trackId).toString(), MimeTypes.AUDIO_DTS,
+        "dtsc",
+        Format.NO_VALUE, DTSAUDIO_MAX_FRAME_SIZE,
+        dtsChannelCount, dtsSamplingRate, null, null, Format.NO_VALUE, null);
+
+    return dtsFormat;
+  }
+
+  public static int getFrameSize() {
+    return dtsFrameSizeInBytes;
+  }
+
+  public static void setFrameSize(int newFS) {
+    if (newFS != dtsFrameSizeInBytes && newFS > 0) {
+      dtsFrameSizeInBytes = newFS;
+    }
+  }
+
+  public static int getNumOfAudioSamples() {
+    return dtsNumOfSamples;
+  }
+
+  public static void setNumOfAudioSamples(int newFS) {
+    if (newFS != dtsNumOfSamples && newFS > 0) {
+      dtsNumOfSamples = newFS;
+    }
+  }
+
+  public static int getSampleRate() {
+    return dtsSamplingRate;
+  }
+
+  public static void setSampleRate(int newSR) {
+    if (newSR != dtsSamplingRate && newSR > 0 && newSR <= 48000) {
+      dtsSamplingRate = newSR;
+    }
+  }
+
+  public static int getNumChannel() {
+    return dtsChannelCount;
+  }
+
+  public static void setNumChannel(int chn) {
+    if (chn != dtsChannelCount && chn > 0 && chn <= 8) {
+      dtsChannelCount = chn;
+    }
+  }
+
+  public static int getBitDepth() {
+    return dtsBitDepth;
+  }
+
+  public static void setDtsBitDepth(int bitDepth) {
+    if (bitDepth != dtsBitDepth && bitDepth > 0 && bitDepth <= 4) {
+      dtsBitDepth = bitDepth;
+    }
+  }
+
+  public static long getFrameDuration() {
+    return dtsFrameDuration;
   }
 
   /**
-   * Returns the DTS format given {@code data} containing the DTS frame according to ETSI TS 102 114
-   * subsections 5.3/5.4.
-   *
-   * @param frame The DTS frame to parse.
-   * @param trackId The track identifier to set on the format.
-   * @param language The language to set on the format.
-   * @param drmInitData {@link DrmInitData} to be included in the format.
-   * @return The DTS format parsed from data in the header.
-   */
-  public static Format parseDtsFormat(
-      byte[] frame,
-      @Nullable String trackId,
-      @Nullable String language,
-      @Nullable DrmInitData drmInitData) {
-    ParsableBitArray frameBits = getNormalizedFrameHeader(frame);
-    frameBits.skipBits(32 + 1 + 5 + 1 + 7 + 14); // SYNC, FTYPE, SHORT, CPF, NBLKS, FSIZE
-    int amode = frameBits.readBits(6);
-    int channelCount = CHANNELS_BY_AMODE[amode];
-    int sfreq = frameBits.readBits(4);
-    int sampleRate = SAMPLE_RATE_BY_SFREQ[sfreq];
-    int rate = frameBits.readBits(5);
-    int bitrate =
-        rate >= TWICE_BITRATE_KBPS_BY_RATE.length
-            ? Format.NO_VALUE
-            : TWICE_BITRATE_KBPS_BY_RATE[rate] * 1000 / 2;
-    frameBits.skipBits(10); // MIX, DYNF, TIMEF, AUXF, HDCD, EXT_AUDIO_ID, EXT_AUDIO, ASPF
-    channelCount += frameBits.readBits(2) > 0 ? 1 : 0; // LFF
-    return new Format.Builder()
-        .setId(trackId)
-        .setSampleMimeType(MimeTypes.AUDIO_DTS)
-        .setAverageBitrate(bitrate)
-        .setChannelCount(channelCount)
-        .setSampleRate(sampleRate)
-        .setDrmInitData(drmInitData)
-        .setLanguage(language)
-        .build();
-  }
-
-  /**
-   * Returns the number of audio samples represented by the given DTS frame.
+   * Returns the number of audio samples represented by the given DTS frame
    *
    * @param data The frame to parse.
    * @return The number of audio samples represented by the frame.
    */
-  public static int parseDtsAudioSampleCount(byte[] data) {
-    int nblks;
-    switch (data[0]) {
-      case FIRST_BYTE_LE:
-        nblks = ((data[5] & 0x01) << 6) | ((data[4] & 0xFC) >> 2);
-        break;
-      case FIRST_BYTE_14B_LE:
-        nblks = ((data[4] & 0x07) << 4) | ((data[7] & 0x3C) >> 2);
-        break;
-      case FIRST_BYTE_14B_BE:
-        nblks = ((data[5] & 0x07) << 4) | ((data[6] & 0x3C) >> 2);
-        break;
-      default:
-        // We blindly assume FIRST_BYTE_BE if none of the others match.
-        nblks = ((data[4] & 0x01) << 6) | ((data[5] & 0xFC) >> 2);
-    }
-    return (nblks + 1) * 32;
-  }
+  public static int parseDtsAudioSampleCount(ByteBuffer data) {
 
-  /**
-   * Like {@link #parseDtsAudioSampleCount(byte[])} but reads from a {@link ByteBuffer}. The
-   * buffer's position is not modified.
-   *
-   * @param buffer The {@link ByteBuffer} from which to read.
-   * @return The number of audio samples represented by the syncframe.
-   */
-  public static int parseDtsAudioSampleCount(ByteBuffer buffer) {
-    // See ETSI TS 102 114 subsection 5.4.1.
-    int position = buffer.position();
-    int nblks;
-    switch (buffer.get(position)) {
-      case FIRST_BYTE_LE:
-        nblks = ((buffer.get(position + 5) & 0x01) << 6) | ((buffer.get(position + 4) & 0xFC) >> 2);
-        break;
-      case FIRST_BYTE_14B_LE:
-        nblks = ((buffer.get(position + 4) & 0x07) << 4) | ((buffer.get(position + 7) & 0x3C) >> 2);
-        break;
-      case FIRST_BYTE_14B_BE:
-        nblks = ((buffer.get(position + 5) & 0x07) << 4) | ((buffer.get(position + 6) & 0x3C) >> 2);
-        break;
-      default:
-        // We blindly assume FIRST_BYTE_BE if none of the others match.
-        nblks = ((buffer.get(position + 4) & 0x01) << 6) | ((buffer.get(position + 5) & 0xFC) >> 2);
-    }
-    return (nblks + 1) * 32;
-  }
+    int frameSize = 0;
+    int sampleCount = 0;
+    boolean rc;
 
-  /**
-   * Returns the size in bytes of the given DTS frame.
-   *
-   * @param data The frame to parse.
-   * @return The frame's size in bytes.
-   */
-  public static int getDtsFrameSize(byte[] data) {
-    int fsize;
-    boolean uses14BitPerWord = false;
-    switch (data[0]) {
-      case FIRST_BYTE_14B_BE:
-        fsize = (((data[6] & 0x03) << 12) | ((data[7] & 0xFF) << 4) | ((data[8] & 0x3C) >> 2)) + 1;
-        uses14BitPerWord = true;
-        break;
-      case FIRST_BYTE_LE:
-        fsize = (((data[4] & 0x03) << 12) | ((data[7] & 0xFF) << 4) | ((data[6] & 0xF0) >> 4)) + 1;
-        break;
-      case FIRST_BYTE_14B_LE:
-        fsize = (((data[7] & 0x03) << 12) | ((data[6] & 0xFF) << 4) | ((data[9] & 0x3C) >> 2)) + 1;
-        uses14BitPerWord = true;
-        break;
-      default:
-        // We blindly assume FIRST_BYTE_BE if none of the others match.
-        fsize = (((data[5] & 0x03) << 12) | ((data[6] & 0xFF) << 4) | ((data[7] & 0xF0) >> 4)) + 1;
+    frameSize = data.limit();
+    rc = parseFrame(data, frameSize);
+
+    if (rc == true) {
+      sampleCount = getNumOfAudioSamples();
     }
 
-    // If the frame is stored in 14-bit mode, adjust the frame size to reflect the actual byte size.
-    return uses14BitPerWord ? fsize * 16 / 14 : fsize;
+    Log.d(TAG, "parseDtsAudioSampleCount: Sample count " + sampleCount);
+    return sampleCount;
+
   }
 
   private static ParsableBitArray getNormalizedFrameHeader(byte[] frameHeader) {
-    if (frameHeader[0] == FIRST_BYTE_BE) {
+    if (frameHeader[0] == FIRST_BYTE_16B_BE) {
       // The frame is already 16-bit mode, big endian.
       return new ParsableBitArray(frameHeader);
     }
@@ -213,7 +431,7 @@ public final class DtsUtil {
       }
     }
     ParsableBitArray frameBits = new ParsableBitArray(frameHeader);
-    if (frameHeader[0] == (byte) (SYNC_VALUE_14B_BE >> 24)) {
+    if (frameHeader[0] == (byte) (DTSHD_SYNC_CORE_14BIT_BE >> 24)) {
       // Discard the 2 most significant bits of each 16 bit word.
       ParsableBitArray scratchBits = new ParsableBitArray(frameHeader);
       while (scratchBits.bitsLeft() >= 16) {
@@ -226,8 +444,7 @@ public final class DtsUtil {
   }
 
   private static boolean isLittleEndianFrameHeader(byte[] frameHeader) {
-    return frameHeader[0] == FIRST_BYTE_LE || frameHeader[0] == FIRST_BYTE_14B_LE;
+    return frameHeader[0] == FIRST_BYTE_16B_LE || frameHeader[0] == FIRST_BYTE_14B_LE ||
+        frameHeader[0] == FIRST_BYTE_EXSS_16BIT_LE;
   }
-
-  private DtsUtil() {}
 }

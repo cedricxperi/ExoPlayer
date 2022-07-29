@@ -27,6 +27,7 @@ import android.media.AudioAttributes;
 import android.media.AudioFormat;
 import android.media.AudioManager;
 import android.media.MediaCodec;
+import android.media.MediaExtractor;
 import android.media.MediaCrypto;
 import android.media.MediaFormat;
 import android.net.Uri;
@@ -47,6 +48,8 @@ import java.util.UUID;
 public final class C {
 
   private C() {}
+
+  public static final long UNKNOWN_TIME_US = -1L;
 
   /**
    * Special constant representing a time corresponding to the end of a source. Suitable for use in
@@ -339,6 +342,11 @@ public final class C {
    */
   public static final int SPATIALIZATION_BEHAVIOR_NEVER =
       AudioAttributes.SPATIALIZATION_BEHAVIOR_NEVER;
+
+  /**
+   * @see MediaExtractor#SAMPLE_FLAG_SYNC
+   */
+  public static final int SAMPLE_FLAG_SYNC = MediaExtractor.SAMPLE_FLAG_SYNC;
 
   /**
    * Stream types for an {@link android.media.AudioTrack}. One of {@link #STREAM_TYPE_ALARM}, {@link
