@@ -674,6 +674,7 @@ public final class DefaultAudioSink implements AudioSink {
       return SINK_FORMAT_SUPPORTED_DIRECTLY;
     }
     if (audioCapabilities.isPassthroughPlaybackSupported(format)) {
+      Log.d("DTS_MOD", "Playing back via Direct Passthrough Playback.");
       return SINK_FORMAT_SUPPORTED_DIRECTLY;
     }
     return SINK_FORMAT_UNSUPPORTED;
