@@ -108,7 +108,7 @@ public class SampleChooserActivity extends AppCompatActivity
       AssetManager assetManager = getAssets();
       try {
         for (String asset : assetManager.list("")) {
-          if (asset.endsWith(".exolist.json")) {
+          if (asset.endsWith(".exolist.dts.json")) {
             uriList.add("asset:///" + asset);
           }
         }

@@ -1,0 +1,200 @@
+[
+  {
+    "name": "Rakuten Head-end Verification",
+    "samples": [
+      {
+        "name": "DASH DTS:X P2 5.1.4 (with Sub-title)",
+        "uri": "https://s3-eu-west-1.amazonaws.com/wuakidevstpeter/g/pack/for_xperi/c3e50d292b47841d5060d3af8141cf9e-mc-0-146-0-0_UHD_HDR10_D2BBC/stream_dtsx.mpd",
+        "subtitle_uri": "https://xperi-pa-html5p-aps.s3.ap-southeast-1.amazonaws.com/test-streams/rakuten/morbius.vtt",
+        "subtitle_mime_type": "text/vtt",
+        "subtitle_language": "en"
+      },
+      {
+        "name": "DASH DTSC 5.1 (with Sub-title)",
+        "uri": "https://s3-eu-west-1.amazonaws.com/wuakidevstpeter/g/pack/for_xperi/c3e50d292b47841d5060d3af8141cf9e-mc-0-146-0-0_UHD_HDR10_D2BBC/stream_dtsc.mpd",
+        "subtitle_uri": "https://xperi-pa-html5p-aps.s3.ap-southeast-1.amazonaws.com/test-streams/rakuten/morbius.vtt",
+        "subtitle_mime_type": "text/vtt",
+        "subtitle_language": "en"
+      },
+      {
+        "name": "DASH DTS Express 5.1",
+        "uri": "https://secured.streamdts.com/dtsx/dtse/dash/callout/index.mpd"
+      },
+      {
+        "name": "DASH EAC3 5.1",
+        "uri": "https://s3-eu-west-1.amazonaws.com/wuakidevstpeter/g/pack/for_xperi/witheflag/09a19464271d41fa1855eb73119e5977-mc-0-147-0-0_UHD_HDR10_D2BBC/stream_ec3.mpd"
+      },
+      {
+        "name": "DTS:X 5.1.4 - DASH - PlayReady",
+        "uri": "https://drm.streamdts.com/dtsx/dtsx/dash/playready/callout/index.mpd",
+        "drm_scheme": "playready",
+        "drm_license_uri": "https://playready.ezdrm.com/cency/preauth.aspx?pX=79B689"
+      }
+    ]
+  },
+  {
+    "name": "Rakuten Embedded LKFS Test",
+    "samples": [
+      {
+        "name": "DASH DTS:X P2 5.1.4 (no -e, with embedded LKFS)",
+        "uri": "https://s3-eu-west-1.amazonaws.com/wuakidevstpeter/g/pack/for_xperi/noeflag/0588ffa3441c39a395f00781afb54756-mc-0-147-0-0_UHD_HDR10_D2BBC/stream_dtsx.mpd"
+      },
+      {
+        "name": "DASH DTS:X P2 5.1.4 (with -e, no embedded LKFS)",
+        "uri": "https://s3-eu-west-1.amazonaws.com/wuakidevstpeter/g/pack/for_xperi/witheflag/09a19464271d41fa1855eb73119e5977-mc-0-147-0-0_UHD_HDR10_D2BBC/stream_dtsx.mpd"
+      },
+      {
+        "name": "DASH DTSC 5.1",
+        "uri": "https://s3-eu-west-1.amazonaws.com/wuakidevstpeter/g/pack/for_xperi/witheflag/09a19464271d41fa1855eb73119e5977-mc-0-147-0-0_UHD_HDR10_D2BBC/stream_dtsc.mpd"
+      },
+      {
+        "name": "DASH EAC3 5.1",
+        "uri": "https://s3-eu-west-1.amazonaws.com/wuakidevstpeter/g/pack/for_xperi/witheflag/09a19464271d41fa1855eb73119e5977-mc-0-147-0-0_UHD_HDR10_D2BBC/stream_ec3.mpd"
+      }
+    ]
+  },
+  {
+    "name": "DASH",
+    "samples": [
+      {
+        "name": "DTS:X 5.1.4 - DASH",
+        "uri": "https://secured.streamdts.com/dtsx/dtsx/dash/callout/index.mpd"
+      },
+      {
+        "name": "DTS:X 5.1 - DASH",
+        "uri": "https://secured.streamdts.com/dtsx/dtsx/dash/callout51/index.mpd"
+      },
+      {
+        "name": "DTS Digital Surround 5.1 - DASH",
+        "uri": "https://secured.streamdts.com/dtsx/dtsc/dash/callout/index.mpd"
+      },
+      {
+        "name": "DTS Express 5.1 - DASH",
+        "uri": "https://secured.streamdts.com/dtsx/dtse/dash/callout/index.mpd"
+      }
+    ]
+  },{
+  "name": "HLS-fMP4",
+  "samples": [
+    {
+      "name": "DTS:X 5.1.4 - HLS fMP4",
+      "uri": "https://secured.streamdts.com/dtsx/dtsx/hls/fmp4/callout/index.m3u8"
+    },
+    {
+      "name": "DTS:X 5.1 - HLS fMP4",
+      "uri": "https://secured.streamdts.com/dtsx/dtsx/hls/fmp4/callout51/index.m3u8"
+    },
+    {
+      "name": "DTS Digital Surround 5.1 - HLS fMP4",
+      "uri": "https://secured.streamdts.com/dtsx/dtsc/hls/fmp4/callout/index.m3u8"
+    },
+    {
+      "name": "DTS Express 5.1 - HLS fMP4",
+      "uri": "https://secured.streamdts.com/dtsx/dtse/hls/fmp4/callout/index.m3u8"
+    }
+  ]
+  },{
+    "name": "HLS v4",
+    "samples": [
+      {
+        "name": "DTS:X 5.1.4 - HLS v4",
+        "uri": "https://secured.streamdts.com/dtsx/dtsx/hls/ts/callout/index.m3u8"
+      },
+      {
+        "name": "DTS:X 5.1 - HLS v4",
+        "uri": "https://secured.streamdts.com/dtsx/dtsx/hls/ts/callout51/index.m3u8"
+      },
+      {
+        "name": "DTS Digital Surround 5.1 - HLS v4",
+        "uri": "https://secured.streamdts.com/dtsx/dtsc/hls/ts/callout/index.m3u8"
+      },
+      {
+        "name": "DTS Express 5.1 - HLS v4",
+        "uri": "https://secured.streamdts.com/dtsx/dtse/hls/ts/callout/index.m3u8"
+      }
+    ]
+  },{
+    "name": "HLS v3",
+    "samples": [
+      {
+        "name": "DTS Digital Surround 5.1 - HLS v3",
+        "uri": "https://secured.streamdts.com/dtshd/dtsc/hls/index.m3u8"
+      },
+      {
+        "name": "DTS Express 5.1 - HLS v3",
+        "uri": "https://secured.streamdts.com/dtshd/dtse/hls/index.m3u8"
+      }
+    ]
+  },
+  {
+    "name": "DRM",
+    "samples": [
+      {
+        "name": "DASH Widevine - DTS Digital Surround 5.1",
+        "uri": "https://drm.streamdts.com/dtsx/dtsc/dash/widevine/callout/index.mpd",
+        "drm_scheme": "widevine",
+        "drm_license_url": "https://widevine-dash.ezdrm.com/proxy?pX=DB6632"
+      },
+      {
+        "name": "DASH Playready - DTS Digital Surround 5.1",
+        "uri": "https://drm.streamdts.com/dtsx/dtsc/dash/playready/callout/index.mpd",
+        "drm_scheme": "playready",
+        "drm_license_url": "https://playready.ezdrm.com/cency/preauth.aspx?pX=79B689"
+      },
+      {
+        "name": "DASH Widevine - DTS Express 5.1",
+        "uri": "https://drm.streamdts.com/dtsx/dtse/dash/widevine/callout/index.mpd",
+        "drm_scheme": "widevine",
+        "drm_license_url": "https://widevine-dash.ezdrm.com/proxy?pX=DB6632"
+      },
+      {
+        "name": "DASH Playready - DTS Express 5.1",
+        "uri": "https://drm.streamdts.com/dtsx/dtse/dash/playready/callout/index.mpd",
+        "drm_scheme": "playready",
+        "drm_license_url": "https://playready.ezdrm.com/cency/preauth.aspx?pX=79B689"
+      },
+      {
+        "name": "DASH Widevine - DTS:X 5.1.4",
+        "uri": "https://drm.streamdts.com/dtsx/dtsx/dash/widevine/callout/index.mpd",
+        "drm_scheme": "widevine",
+        "drm_license_url": "https://widevine-dash.ezdrm.com/proxy?pX=DB6632"
+      },
+      {
+        "name": "DASH Playready - DTS:X 5.1.4",
+        "uri": "https://drm.streamdts.com/dtsx/dtsx/dash/playready/callout/index.mpd",
+        "drm_scheme": "playready",
+        "drm_license_url": "https://playready.ezdrm.com/cency/preauth.aspx?pX=79B689"
+      }
+    ]
+  },
+  {
+    "name": "AAC",
+    "samples": [
+      {
+        "name": "DASH Un-Encrypted AAC Stereo",
+        "uri": "https://secured.streamdts.com/aac/dash/html5/stream.mpd"
+      },
+      {
+        "name": "DASH Widevine AAC Stereo",
+        "uri": "https://drm.streamdts.com/aac/dash/widevine/html5/stream.mpd",
+        "drm_scheme": "widevine",
+        "drm_license_url": "https://widevine-dash.ezdrm.com/proxy?pX=DB6632"
+      },
+      {
+        "name": "DASH Playready AAC Stereo",
+        "uri": "https://drm.streamdts.com/aac/dash/playready/html5/stream.mpd",
+        "drm_scheme": "playready",
+        "drm_license_url": "https://playready.ezdrm.com/cency/preauth.aspx?pX=79B689"
+      }
+    ]
+  },
+  {
+    "name": "Dolby",
+    "samples": [
+      {
+        "name": "DASH Un-Encrypted Dolby AC3",
+        "uri": "https://xperi-pa-html5p-aps.s3-ap-southeast-1.amazonaws.com/test-streams/dolby/amaze_5p1_dash_ac3/stream.mpd"
+      }
+    ]
+  }
+]
