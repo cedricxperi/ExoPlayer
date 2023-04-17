@@ -1541,7 +1541,7 @@ public class DefaultTrackSelector extends MappingTrackSelector {
         constrainAudioChannelCountToDeviceCapabilities = true;
         // General
         exceedRendererCapabilitiesIfNecessary = true;
-        tunnelingEnabled = false;
+        tunnelingEnabled = true;
         allowMultipleAdaptiveSelections = true;
       }
 
